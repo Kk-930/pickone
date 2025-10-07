@@ -1,62 +1,121 @@
-from flask import Flask, render_template, redirect, url_for, session, flash, request
+from flask import Flask, render_template, redirect, url_for, session, request
+from flask_sqlalchemy import SQLAlchemy
+import secrets
 import os
-import secrets # Used for a secure session key
+import json # Used to store prize list as a JSON string
 
-# Initialize the Flask app
+# --- Configuration ---
 app = Flask(__name__)
 
-# Set a secure secret key for session management (CRITICAL for security)
-# This key is used to sign the session cookie.
-# In a real app, use an environment variable (os.environ.get('SECRET_KEY'))
-app.config['SECRET_KEY'] = secrets.token_hex(16) 
+# Use an environment variable for the Secret Key (CRITICAL for deployment)
+# If running locally, it defaults to a secure random key.
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
-# --- Game Configuration ---
-# Your secret options list. The numbers correspond to the index + 1
-OPTIONS = [
-    "A Surprise Weekend Getaway!", 
-    "A New Gadget You've Been Eyeing!", 
-    "A Home-Cooked Meal of Your Choice and a Movie Night!",
-    "A Free Pass on One Chore for a Month!"
-]
-# ---------------------------
+# Database Configuration (SQLite for simplicity)
+# When deployed on Render's free tier, you'd use a managed database like Postgres.
+# For a simple game like this, SQLite is okay for small-scale use.
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///games.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-@app.route('/', methods=['GET', 'POST'])
+db = SQLAlchemy(app)
+
+# --- Database Model ---
+class Game(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    # The prize options are stored as a JSON string
+    options_json = db.Column(db.Text, nullable=False)
+    # The winning choice is stored here (index, not number)
+    chosen_index = db.Column(db.Integer, default=-1) # -1 means no choice yet
+
+    def get_options(self):
+        return json.loads(self.options_json)
+
+# Initialize the database and create tables
+with app.app_context():
+    db.create_all()
+
+# --- Routes ---
+
+# 1. Homepage (Start/Instructions)
+@app.route('/')
 def index():
-    # 'chosen_option' is stored in the user's session once they make a choice
-    chosen_option_index = session.get('chosen_option', -1)
-    
-    # If a choice has already been made, just show the result page
-    if chosen_option_index != -1:
-        chosen_option_text = OPTIONS[chosen_option_index]
-        return render_template('index.html', 
-                               options_count=len(OPTIONS),
-                               chosen_option=chosen_option_text,
-                               game_over=True)
+    return render_template('index.html')
 
-    # Handle the form submission (when the user taps a number)
+# 2. Game Creation Form
+@app.route('/create', methods=['GET', 'POST'])
+def create_game():
     if request.method == 'POST':
+        game_title = request.form.get('title')
+        # Get all options from the form (up to 4 in this example)
+        options = []
+        for i in range(1, 5):
+            option = request.form.get(f'option_{i}', '').strip()
+            if option:
+                options.append(option)
+        
+        if not game_title or len(options) < 2:
+            # Simple error handling
+            return "Error: Game needs a title and at least two options.", 400
+
+        # Create a new Game object and save to database
+        new_game = Game(
+            title=game_title,
+            options_json=json.dumps(options)
+        )
+        db.session.add(new_game)
+        db.session.commit()
+
+        # Redirect to the unique game page
+        return redirect(url_for('game_page', game_id=new_game.id))
+
+    # For GET request, show the creation form
+    return render_template('create.html')
+
+# 3. The Sharable Game Page
+@app.route('/game/<int:game_id>', methods=['GET', 'POST'])
+def game_page(game_id):
+    game = db.session.get(Game, game_id)
+    if not game:
+        return "Game not found.", 404
+        
+    options = game.get_options()
+    
+    # Handle the choice submission
+    if request.method == 'POST':
+        # Check if a choice has already been made
+        if game.chosen_index != -1:
+            # Prevent re-submitting if the game is already over
+            return redirect(url_for('game_page', game_id=game_id))
+            
         try:
-            # Get the chosen number and convert it to a list index
+            # Get the chosen number (1-based index)
             choice = int(request.form.get('choice'))
             chosen_index = choice - 1
             
-            # 1. Check if the choice is valid
-            if 0 <= chosen_index < len(OPTIONS):
-                # 2. Store the choice in the session and redirect
-                session['chosen_option'] = chosen_index
-                flash(f"You picked number {choice}!") # Flash a quick message (optional)
-                return redirect(url_for('index')) # Redirect to GET to show the result
+            # 1. Validate the choice
+            if 0 <= chosen_index < len(options):
+                # 2. Record the choice in the database
+                game.chosen_index = chosen_index
+                db.session.commit()
+                # Redirect to GET to show the result
+                return redirect(url_for('game_page', game_id=game_id))
             else:
                 return "Invalid option selected", 400
         except:
             return "Error processing choice", 500
 
-    # For the initial GET request (or after a failed POST)
-    # Renders the numbered list for the partner to choose from
-    return render_template('index.html', 
-                           options_count=len(OPTIONS), 
-                           game_over=False)
+    # For GET request, render the game page
+    game_over = game.chosen_index != -1
+    chosen_option_text = options[game.chosen_index] if game_over else None
+    share_link = request.url # The current URL is the share link
+
+    return render_template('game.html', 
+                           game=game,
+                           options_count=len(options),
+                           chosen_option=chosen_option_text,
+                           game_over=game_over,
+                           share_link=share_link)
 
 if __name__ == '__main__':
-    # Start the web server
     app.run(debug=True)

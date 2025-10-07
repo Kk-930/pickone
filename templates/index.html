@@ -2,89 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pick Your Prize!</title>
+    <title>Prize Picker Creator</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f4f7f6;
-        }
-        .container {
-            text-align: center;
-            padding: 30px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            max-width: 90%;
-            width: 400px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        .option-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 15px;
-            margin-top: 30px;
-        }
-        .option-button {
-            width: 100%;
-            padding: 20px 0;
-            font-size: 2em;
-            font-weight: bold;
-            color: white;
-            background-color: #007bff;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        .option-button:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px);
-        }
-        .option-button:active {
-            transform: translateY(0);
-        }
-        .reveal-box {
-            background-color: #28a745;
-            color: white;
-            padding: 30px;
-            border-radius: 8px;
-            margin-top: 30px;
-            font-size: 1.5em;
-            font-weight: 600;
-        }
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .btn { padding: 15px 30px; font-size: 1.2em; background-color: #007bff; color: white; border: none; border-radius: 8px; text-decoration: none; cursor: pointer; }
+        .btn:hover { background-color: #0056b3; }
     </style>
 </head>
 <body>
-    <div class="container">
-        {% if game_over %}
-            <h1>🎉 The Game Has Ended! 🎉</h1>
-            <p style="font-size: 1.2em; color: #555;">You chose the option behind the number you tapped. And your prize is...</p>
-            <div class="reveal-box">
-                {{ chosen_option }}
-            </div>
-            <p style="margin-top: 20px;">Enjoy your selection!</p>
-        {% else %}
-            <h1>Pick One: Which Number Will You Tap?</h1>
-            <p style="color: #666;">There are amazing options hidden behind each number. Choose wisely—**you can only pick one!**</p>
-            
-            <form method="POST" class="option-grid">
-                {% for i in range(options_count) %}
-                    <button type="submit" name="choice" value="{{ i + 1 }}" class="option-button">
-                        {{ i + 1 }}
-                    </button>
-                {% endfor %}
-            </form>
-        {% endif %}
-    </div>
+    <h1>🎁 Welcome to the Prize Picker Game Creator! 🎁</h1>
+    <p>Create a unique, one-time-use prize selection game for your partner, friend, or family member.</p>
+    <a href="{{ url_for('create_game') }}" class="btn">Start Creating Your Game</a>
 </body>
 </html>

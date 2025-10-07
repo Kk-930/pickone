@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Your Prize Game</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f4f7f6; padding: 20px; }
+        .form-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px; }
+        h1 { color: #333; margin-bottom: 25px; }
+        label { display: block; margin-top: 15px; font-weight: bold; color: #555; }
+        input[type="text"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .submit-btn { width: 100%; padding: 12px; margin-top: 30px; font-size: 1.1em; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .submit-btn:hover { background-color: #1e7e34; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>✨ Create Your Unique Game ✨</h1>
+        <form method="POST">
+            <label for="title">Game Title (e.g., "Dad's Birthday Choice"):</label>
+            <input type="text" id="title" name="title" required placeholder="Choose a title...">
+
+            <p style="margin-top: 25px; font-style: italic;">Enter the hidden prize options below (min 2, max 4):</p>
+
+            <label for="option_1">Option 1:</label>
+            <input type="text" id="option_1" name="option_1" required placeholder="The best prize!">
+
+            <label for="option_2">Option 2:</label>
+            <input type="text" id="option_2" name="option_2" required placeholder="A good alternative prize.">
+            
+            <label for="option_3">Option 3 (Optional):</label>
+            <input type="text" id="option_3" name="option_3" placeholder="If you want three options...">
+
+            <label for="option_4">Option 4 (Optional):</label>
+            <input type="text" id="option_4" name="option_4" placeholder="If you want four options...">
+
+            <button type="submit" class="submit-btn">Generate Game & Get Share Link</button>
+        </form>
+    </div>
+</body>
+</html>
