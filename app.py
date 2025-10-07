@@ -2,6 +2,8 @@ from flask import Flask, render_template, redirect, url_for, session, request
 from flask_sqlalchemy import SQLAlchemy
 import secrets
 import os
+import smtplib
+from email.message import EmailMessage
 import json # Used to store prize list as a JSON string
 
 # --- Configuration ---
@@ -19,10 +21,56 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+# --- Email Configuration ---
+# NOTE: Set these environment variables in Render's dashboard!
+SMTP_SERVER = os.environ.get('SMTP_SERVER')  # e.g., 'smtp.gmail.com'
+SMTP_PORT = os.environ.get('SMTP_PORT')      # e.g., '587' or '465'
+SMTP_USERNAME = os.environ.get('SMTP_USERNAME') # Your sending email address
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD') # Your app-specific password
+
+def send_notification_email(recipient_email, game_title, selected_prize, game_url):
+    if not all([SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD]):
+        print("EMAIL CONFIGURATION MISSING. Notification not sent.")
+        return
+
+    try:
+        msg = EmailMessage()
+        msg['Subject'] = f"🎁 Game Reveal: '{game_title}' Has Been Picked!"
+        msg['From'] = SMTP_USERNAME
+        msg['To'] = recipient_email
+
+        body = f"""
+        Hello!
+
+        Your game, '{game_title}', has been played and the prize has been revealed!
+
+        The recipient chose: "{selected_prize}"
+
+        You can view the final, permanent result here:
+        {game_url}
+
+        Happy Gifting!
+        """
+        msg.set_content(body)
+
+        # Connect to the SMTP server
+        with smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT)) as server:
+            server.starttls()  # Use TLS encryption
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.send_message(msg)
+            print(f"Successfully sent notification to {recipient_email}")
+
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+# --- END: ADD EMAIL CONFIGURATION AND FUNCTION HERE ---
+
+
 # --- Database Model ---
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
+    creator_email = db.Column(db.String(100), nullable=True) 
     # The prize options are stored as a JSON string
     options_json = db.Column(db.Text, nullable=False)
     # The winning choice is stored here (index, not number)
@@ -98,6 +146,12 @@ def game_page(game_id):
                 # 2. Record the choice in the database
                 game.chosen_index = chosen_index
                 db.session.commit()
+		# --- NEW: SEND NOTIFICATION EMAIL ---
+                selected_prize = options[chosen_index]
+                game_url = request.url 
+                send_notification_email(game.creator_email, game.title, selected_prize, game_url)
+                # -----------------------------------
+
                 # Redirect to GET to show the result
                 return redirect(url_for('game_page', game_id=game_id))
             else:
