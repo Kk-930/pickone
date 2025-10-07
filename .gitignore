@@ -1,0 +1,11 @@
+# Virtual Environment
+venv/
+.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Flask/Web
+.flaskenv
+instance/
